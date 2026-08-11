@@ -141,6 +141,10 @@
           class="h-11 px-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm text-sm font-medium action-btn">
           ☁️ 同期
         </button>
+        <button id="manageBtn"
+          class="h-11 px-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm text-sm font-medium action-btn">
+          ⚙️ 行動の管理
+        </button>
         <button id="themeBtn"
           class="h-11 w-11 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm text-lg action-btn">
           🌙
@@ -293,36 +297,33 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'kyou-zero-pro-v2';
+    const STORAGE_KEY = 'kyou-zero-pro-v3'; // マスタ統合のためバージョンをv3に更新
 
     // Supabase (replace with your values)
     const SUPABASE_URL = 'https://rortxwatkzyuexrbznvo.supabase.co'
     const SUPABASE_KEY = 'sb_publishable_cKWkokv4nf4hDz6Vt8abvw_kxNBzrQF'
     const sb = window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_KEY)
 
-    const TASK_POOL = [
-      { label: '映画', type: 'single', minutes: 15 },
-      { label: 'プロト', type: 'single', minutes: 15 },
-      { label: 'DIY', type: 'single', minutes: 15 },
-      { label: '裁縫', type: 'single', minutes: 15 },
-      { label: '読書', type: 'single', minutes: 15 },
-      { label: '散歩', type: 'single', minutes: 15 },
-      { label: '片付け', type: 'single', minutes: 15 },
-      { label: 'コード', type: 'cont', minutes: 25 },
-      { label: '研究', type: 'cont', minutes: 25 },
-      { label: 'Cosense', type: 'cont', minutes: 25 },
-      { label: 'スケジュール', type: 'cont', minutes: 25 },
-      { label: 'TRN', type: 'cont', minutes: 25 },
-      { label: '英語', type: 'cont', minutes: 25 },
-      { label: 'ブログ', type: 'cont', minutes: 25 },
-      { label: '筋トレ', type: 'cont', minutes: 25 },
-    ];
-
-    const defaultOtherActions = [
-      { label: '🧹 掃除', count: 0 },
-      { label: '📦 片付け', count: 0 },
-      { label: '📝 Google Keep', count: 0 },
-      { label: '💬 ChatGPTと話す', count: 0 },
+    const defaultTaskPool = [
+      { label: '映画', type: 'single', minutes: 15, is_other_action: false },
+      { label: 'プロト', type: 'single', minutes: 15, is_other_action: false },
+      { label: 'DIY', type: 'single', minutes: 15, is_other_action: false },
+      { label: '裁縫', type: 'single', minutes: 15, is_other_action: false },
+      { label: '読書', type: 'single', minutes: 15, is_other_action: false },
+      { label: '散歩', type: 'single', minutes: 15, is_other_action: false },
+      { label: '片付け', type: 'single', minutes: 15, is_other_action: false },
+      { label: 'コード', type: 'cont', minutes: 25, is_other_action: false },
+      { label: '研究', type: 'cont', minutes: 25, is_other_action: false },
+      { label: 'Cosense', type: 'cont', minutes: 25, is_other_action: false },
+      { label: 'スケジュール', type: 'cont', minutes: 25, is_other_action: false },
+      { label: 'TRN', type: 'cont', minutes: 25, is_other_action: false },
+      { label: '英語', type: 'cont', minutes: 25, is_other_action: false },
+      { label: 'ブログ', type: 'cont', minutes: 25, is_other_action: false },
+      { label: '筋トレ', type: 'cont', minutes: 25, is_other_action: false },
+      { label: '🧹 掃除', type: 'single', minutes: 15, is_other_action: true },
+      { label: '📦 片付け', type: 'single', minutes: 15, is_other_action: true },
+      { label: '📝 Google Keep', type: 'single', minutes: 15, is_other_action: true },
+      { label: '💬 ChatGPTと話す', type: 'single', minutes: 15, is_other_action: true },
     ];
 
     function getJstDateString() {
@@ -342,20 +343,45 @@
         return 1 / (count + 1);
       };
 
-      const singles = TASK_POOL.filter(t => t.type === 'single');
-      const conts = TASK_POOL.filter(t => t.type === 'cont');
+      // state.taskPool からビンゴ用候補のみ抽出
+      const pool = (state && state.taskPool ? state.taskPool : defaultTaskPool).filter(t => !t.is_other_action);
+      const singles = pool.filter(t => t.type === 'single');
+      const conts = pool.filter(t => t.type === 'cont');
 
-      const selectTasks = (pool, countNeeded) => {
-        return pool
+      const selectTasks = (itemPool, countNeeded) => {
+        if (itemPool.length === 0) return [];
+        return itemPool
           .map(task => ({ task, weight: getWeight(task) * (0.8 + Math.random() * 0.4) }))
           .sort((a, b) => b.weight - a.weight)
           .slice(0, countNeeded)
           .map(item => item.task);
       };
 
-      const selectedSingles = selectTasks(singles, 4);
-      const selectedConts = selectTasks(conts, 5);
-      const combined = [...selectedSingles, ...selectedConts];
+      let singleCount = 4;
+      let contCount = 5;
+      if (singles.length < 4) {
+        singleCount = singles.length;
+        contCount = 9 - singleCount;
+      } else if (conts.length < 5) {
+        contCount = conts.length;
+        singleCount = 9 - contCount;
+      }
+
+      const selectedSingles = selectTasks(singles, singleCount);
+      const selectedConts = selectTasks(conts, contCount);
+      let combined = [...selectedSingles, ...selectedConts];
+
+      // 候補不足時のフォールバック
+      if (combined.length < 9) {
+        const fallback = defaultTaskPool.filter(t => !t.is_other_action);
+        for (const task of fallback) {
+          if (combined.length >= 9) break;
+          if (!combined.some(t => t.label === task.label)) {
+            combined.push(task);
+          }
+        }
+      }
+      combined = combined.slice(0, 9);
 
       for (let i = combined.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -378,26 +404,34 @@
       state = {
         started: false,
         theme: 'light',
-        bingo: generateBingo({}),
-        otherActions: defaultOtherActions,
+        taskPool: defaultTaskPool,
+        bingo: [],
+        otherActions: [],
         taskStats: {},
         lastActiveDate: todayJst,
         extraScore: 0,
         memo: ''
       };
+      state.bingo = generateBingo({});
     }
 
     // 互換性チェック
-    if (!state.otherActions) state.otherActions = defaultOtherActions;
+    if (!state.taskPool) state.taskPool = defaultTaskPool;
+    if (!state.otherActions) state.otherActions = [];
     if (!state.taskStats) state.taskStats = {};
     if (!state.lastActiveDate) state.lastActiveDate = todayJst;
-    if (state.bingo) {
-      state.bingo.forEach(cell => {
-        if (cell.count === undefined) {
-          cell.count = cell.done ? 1 : 0;
-        }
+
+    function syncOtherActionsState() {
+      const masterOthers = state.taskPool.filter(t => t.is_other_action);
+      state.otherActions = masterOthers.map(master => {
+        const existing = state.otherActions.find(a => a.label === master.label);
+        return {
+          label: master.label,
+          count: existing ? existing.count : 0
+        };
       });
     }
+    syncOtherActionsState();
 
     const startView = document.getElementById('startView');
     const scoreView = document.getElementById('scoreView');
@@ -419,6 +453,11 @@
     const memo = document.getElementById('memo');
     const memoCount = document.getElementById('memoCount');
 
+    const manageBtn = document.getElementById('manageBtn');
+    const manageModal = document.getElementById('manageModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const addActionBtn = document.getElementById('addActionBtn');
+
     let selectedTask = null;
     let timerSeconds = 15 * 60;
     let timerId = null;
@@ -436,6 +475,77 @@
 
     function debouncedSyncSave() {
       clearTimeout(syncTimer); syncTimer = setTimeout(syncSave, 1200);
+    }
+
+    // Supabase user_tasks との同期処理
+    async function syncUserTasks() {
+      if (!sb) return;
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return;
+      
+      const { data: cloudTasks, error } = await sb
+        .from('user_tasks')
+        .select('label, type, minutes, is_other_action')
+        .eq('user_id', user.id);
+        
+      if (error) {
+        console.error('Supabaseのタスク取得に失敗しました:', error.message);
+        return;
+      }
+      
+      if (cloudTasks && cloudTasks.length > 0) {
+        state.taskPool = cloudTasks.map(t => ({
+          label: t.label,
+          type: t.type,
+          minutes: t.minutes,
+          is_other_action: t.is_other_action
+        }));
+        save();
+        syncOtherActionsState();
+        renderBingo();
+        renderOtherActions();
+      } else {
+        const uploadData = state.taskPool.map(t => ({
+          user_id: user.id,
+          label: t.label,
+          type: t.type,
+          minutes: t.minutes,
+          is_other_action: t.is_other_action
+        }));
+        
+        const { error: uploadError } = await sb
+          .from('user_tasks')
+          .insert(uploadData);
+          
+        if (uploadError) {
+          console.error('Supabaseへのタスクアップロードに失敗しました:', uploadError.message);
+        }
+      }
+    }
+
+    async function syncUpsertUserTask(task) {
+      if (!sb) return;
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return;
+      
+      await sb.from('user_tasks').upsert({
+        user_id: user.id,
+        label: task.label,
+        type: task.type,
+        minutes: task.minutes,
+        is_other_action: task.is_other_action
+      }, { onConflict: 'user_id,label' });
+    }
+
+    async function syncDeleteUserTask(label) {
+      if (!sb) return;
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return;
+      
+      await sb.from('user_tasks')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('label', label);
     }
 
     function applyTheme() {
@@ -584,19 +694,14 @@
         container.appendChild(btn);
       });
 
-      const addBtn = document.createElement('button');
-      addBtn.className = 'rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 p-4 text-center action-btn h-16 flex items-center justify-center text-sm text-slate-500 dark:text-slate-400 gap-1';
-      addBtn.innerHTML = '➕ 追加';
-      addBtn.addEventListener('click', () => {
-        const label = prompt('追加する行動の名前を入力してください（例: 🏃 散歩）');
-        if (label && label.trim()) {
-          state.otherActions.push({ label: label.trim(), count: 0 });
-          renderOtherActions();
-          save();
-          debouncedSyncSave();
-        }
+      const addShortcutBtn = document.createElement('button');
+      addShortcutBtn.className = 'rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 p-4 text-center action-btn h-16 flex items-center justify-center text-sm text-slate-500 dark:text-slate-400 gap-1';
+      addShortcutBtn.innerHTML = '➕ 管理・追加';
+      addShortcutBtn.addEventListener('click', () => {
+        renderModalActionList();
+        manageModal.classList.remove('hidden');
       });
-      container.appendChild(addBtn);
+      container.appendChild(addShortcutBtn);
     }
 
     function updateTimerDisplay() {
@@ -663,7 +768,8 @@
       const { data: { user } } = await sb.auth.getUser();
 
       if (user) {
-        alert(`同期済み: ${user.email}`);
+        await syncUserTasks();
+        alert(`同期完了: ${user.email}`);
         return;
       }
 
@@ -677,6 +783,97 @@
       } else {
         alert('確認メールを送信しました');
       }
+    });
+
+    // 行動の管理 モーダル制御
+    manageBtn.addEventListener('click', () => {
+      renderModalActionList();
+      manageModal.classList.remove('hidden');
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+      manageModal.classList.add('hidden');
+    });
+
+    function renderModalActionList() {
+      const listEl = document.getElementById('modalActionList');
+      listEl.innerHTML = '';
+      
+      state.taskPool.forEach((task, index) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 text-sm';
+        
+        const badgeColor = task.is_other_action 
+          ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' 
+          : (task.type === 'single' ? 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300' : 'bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300');
+        
+        const badgeText = task.is_other_action 
+          ? 'その他' 
+          : (task.type === 'single' ? `単発・${task.minutes}分` : `継続・${task.minutes}分`);
+           
+        item.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="font-semibold">${task.label}</span>
+            <span class="text-[11px] px-2 py-0.5 rounded-full font-medium ${badgeColor}">${badgeText}</span>
+          </div>
+          <button class="delete-task-btn text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 p-1" data-index="${index}">🗑️</button>
+        `;
+        
+        item.querySelector('.delete-task-btn').addEventListener('click', async (e) => {
+          const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+          const deletedTask = state.taskPool[idx];
+          state.taskPool.splice(idx, 1);
+          
+          save();
+          renderModalActionList();
+          syncOtherActionsState();
+          
+          // その日のビンゴの中に削除された行動がある場合、表示上は維持しますが自動生成等に備えて同期
+          renderBingo();
+          renderOtherActions();
+          
+          await syncDeleteUserTask(deletedTask.label);
+        });
+        
+        listEl.appendChild(item);
+      });
+    }
+
+    addActionBtn.addEventListener('click', async () => {
+      const labelEl = document.getElementById('newActionLabel');
+      const typeEl = document.getElementById('newActionType');
+      const minsEl = document.getElementById('newActionMinutes');
+      const isOtherEl = document.getElementById('newActionIsOther');
+      
+      const label = labelEl.value.trim();
+      if (!label) {
+        alert('行動の名前を入力してください');
+        return;
+      }
+      
+      if (state.taskPool.some(t => t.label === label)) {
+        alert('同じ名前の行動が既に登録されています');
+        return;
+      }
+      
+      const newTask = {
+        label: label,
+        type: typeEl.value,
+        minutes: parseInt(minsEl.value),
+        is_other_action: isOtherEl.checked
+      };
+      
+      state.taskPool.push(newTask);
+      labelEl.value = '';
+      isOtherEl.checked = false;
+      
+      save();
+      renderModalActionList();
+      syncOtherActionsState();
+      renderBingo();
+      renderOtherActions();
+      
+      await syncUpsertUserTask(newTask);
     });
 
     function checkDailyReset() {
@@ -728,10 +925,22 @@
       }
     }
 
-    checkDailyReset();
-    renderBingo();
-    renderOtherActions();
-    applyTheme();
+    // 初期化ロード
+    (async () => {
+      checkDailyReset();
+      
+      // ログイン済みならタスクプールを同期
+      if (sb) {
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) {
+          await syncUserTasks();
+        }
+      }
+      
+      renderBingo();
+      renderOtherActions();
+      applyTheme();
+    })();
 
     window.addEventListener('focus', checkDailyReset);
 
@@ -739,6 +948,50 @@
       navigator.serviceWorker.register('./sw.js').catch(() => { });
     }
   </script>
+
+  <!-- 行動管理モーダル -->
+  <div id="manageModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden">
+      <header class="p-6 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+        <h3 class="text-lg font-semibold">⚙️ 行動の管理</h3>
+        <button id="closeModalBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+      </header>
+      
+      <!-- 行動の追加エリア -->
+      <section class="p-6 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950/40 space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <input id="newActionLabel" type="text" placeholder="行動の名前（例: 🏃 散歩）" class="col-span-2 w-full h-11 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          <select id="newActionType" class="h-11 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2 text-sm outline-none">
+            <option value="single">単発（スカイブルー）</option>
+            <option value="cont">継続（ヴァイオレット）</option>
+          </select>
+          <select id="newActionMinutes" class="h-11 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2 text-sm outline-none">
+            <option value="15">15分</option>
+            <option value="25">25分</option>
+            <option value="30">30分</option>
+            <option value="45">45分</option>
+            <option value="60">60分</option>
+          </select>
+          <label class="col-span-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1 cursor-pointer">
+            <input id="newActionIsOther" type="checkbox" class="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500" />
+            「その他の行動」の枠に直接表示する（ビンゴプールからは除外）
+          </label>
+        </div>
+        <button id="addActionBtn" class="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors">
+          追加する
+        </button>
+      </section>
+
+      <!-- 登録済み行動一覧 -->
+      <div id="modalActionList" class="flex-1 overflow-y-auto p-6 space-y-2.5">
+        <!-- JSで動的に追加されます -->
+      </div>
+      
+      <footer class="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 text-xs text-slate-400 text-center">
+        ビンゴ候補は、このプールからランダム＋履歴による推薦（最近やってないものが優先）で毎日自動選出されます。
+      </footer>
+    </div>
+  </div>
 </body>
 
 </html>
