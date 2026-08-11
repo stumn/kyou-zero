@@ -80,7 +80,6 @@
     }
 
     .bingo-cell {
-      aspect-ratio: 1/1;
       transition: all .18s ease
     }
 
@@ -206,12 +205,35 @@
           </div>
         </section>
 
+        <section
+          class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5 lg:p-6">
+          <div class="mb-4">
+            <h2 class="text-lg font-semibold">その他の行動</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">ビンゴに入っていない行動も記録する。</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <button
+              class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn"
+              data-label="掃除">🧹 掃除</button>
+            <button
+              class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn"
+              data-label="片付け">📦 片付け</button>
+            <button
+              class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn"
+              data-label="Google Keep">📝 Google Keep</button>
+            <button
+              class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn"
+              data-label="ChatGPTと話す">💬 ChatGPTと話す</button>
+          </div>
+        </section>
+
       </div>
 
       <div class="lg:col-span-4 xl:col-span-4 space-y-4 lg:space-y-6">
 
         <section id="timerSection"
-          class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5 lg:p-6 lg:sticky lg:top-6">
+          class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5 lg:p-6">
           <div class="flex items-center justify-between mb-4">
             <div>
               <h2 class="text-lg font-semibold">タイマー</h2>
@@ -248,43 +270,18 @@
 
         <section
           class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5 lg:p-6">
-          <div class="mb-4">
-            <h2 class="text-lg font-semibold">その他の行動</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400">ビンゴに入っていない行動も記録する。</p>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <button
-              class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn"
-              data-label="掃除">🧹 掃除</button>
-            <button
-              class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn"
-              data-label="片付け">📦 片付け</button>
-            <button
-              class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn"
-              data-label="Google Keep">📝 Google Keep</button>
-            <button
-              class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn"
-              data-label="ChatGPTと話す">💬 ChatGPTと話す</button>
-          </div>
-
-          <div id="otherLog" class="mt-4 space-y-2"></div>
-        </section>
-
-        <section
-          class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5 lg:p-6">
           <div class="mb-3">
             <h2 class="text-lg font-semibold">書き残し</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400">受け取ったことも、次につなげたいこともここへ。</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">今日の痕跡を一言だけ。</p>
           </div>
 
-          <textarea id="memo" maxlength="120" rows="2"
-            class="w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-3 text-[15px] outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="一言だけ残す"></textarea>
+          <input id="memo" maxlength="120" type="text"
+            class="w-full h-12 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 text-[15px] outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="今日はここまでやれた" />
 
           <div class="mt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>ローカルに保存されます</span>
-            <span id="memoCount">0 / 120</span>
+            <span id="memoCount">0 / 120文字</span>
           </div>
         </section>
 
@@ -300,10 +297,9 @@
     const STORAGE_KEY = 'kyou-zero-pro-v1';
 
     // Supabase (replace with your values)
-    const SUPABASE_URL = 'https://rortxwatkzyuexrbznvo.supabase.co/'
+    const SUPABASE_URL = 'https://rortxwatkzyuexrbznvo.supabase.co'
     const SUPABASE_KEY = 'sb_publishable_cKWkokv4nf4hDz6Vt8abvw_kxNBzrQF'
-    const supabase = window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_KEY)
-
+    const sb = window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_KEY)
 
     const defaultBingo = [
       { id: 1, label: '映画', type: 'single', minutes: 15, done: false },
@@ -317,13 +313,7 @@
       { id: 9, label: '裁縫', type: 'single', minutes: 15, done: false },
     ];
 
-    const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || {
-      started: false,
-      theme: 'light',
-      bingo: defaultBingo,
-      memo: '',
-      otherLogs: []
-    };
+    const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || { started: false, theme: 'light', bingo: defaultBingo, memo: '', extraScore: 0 };
 
     const startView = document.getElementById('startView');
     const scoreView = document.getElementById('scoreView');
@@ -350,6 +340,19 @@
     let timerId = null;
 
     function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+    let syncTimer = null;
+
+    async function syncSave() {
+      if (!supabase) return;
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return;
+      await sb.from('daily_state').upsert({ user_id: user.id, day: new Date().toISOString().slice(0, 10), started: state.started, bingo: state.bingo, memo: state.memo, extra_score: state.extraScore || 0, updated_at: new Date().toISOString() });
+    }
+
+    function debouncedSyncSave() {
+      clearTimeout(syncTimer); syncTimer = setTimeout(syncSave, 1200);
+    }
 
     function applyTheme() {
       const dark = state.theme === 'dark';
@@ -391,7 +394,7 @@
         if (count === 2) reach++;
         if (count === 3) bingo++;
       }
-      return { done, reach, bingo, score: done * 5 + reach * 10 + bingo * 25 };
+      return { done, reach, bingo, score: done * 5 + reach * 10 + bingo * 25 + (state.extraScore || 0) };
     }
 
     function renderScore() {
@@ -406,15 +409,14 @@
       bingoGrid.innerHTML = '';
       state.bingo.forEach(cell => {
         const btn = document.createElement('button');
-        btn.className = 'bingo-cell rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-3 text-left flex flex-col justify-between';
+        btn.className = 'bingo-cell rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-2 text-left flex flex-col justify-between min-h-[88px] lg:min-h-[96px]'
         if (cell.done) btn.classList.add('bingo-done');
         if (selectedCellId === cell.id && !cell.done) btn.classList.add('bingo-selected');
         btn.innerHTML = `
       <div class="flex items-center justify-between text-xs ${cell.done ? 'text-white/90 dark:text-slate-900/80' : 'text-slate-500 dark:text-slate-400'}">
         <span>${cell.type === 'single' ? '単発' : '継続'}</span><span>${cell.minutes}分</span>
       </div>
-      <div class="text-sm lg:text-[15px] font-semibold leading-tight mt-2">${cell.label}</div>
-      <div class="mt-2 text-xs ${cell.done ? 'text-white/90 dark:text-slate-900/80' : 'text-slate-500 dark:text-slate-400'}">${cell.done ? '達成済み' : '選択する'}</div>`;
+      <div class="text-sm font-semibold leading-tight mt-1">${cell.label}</div> <div class="mt-1 text-[11px] ${cell.done ? 'text-white/90 dark:text-slate-900/80' : 'text-slate-500 dark:text-slate-400'}">${cell.done ? '達成済み' : '選択する'}</div>`;
         btn.addEventListener('click', () => {
           if (cell.done) return;
           selectedCellId = cell.id;
@@ -472,38 +474,33 @@
     });
 
     memo.value = state.memo;
-    memoCount.textContent = `${memo.value.length} / 300`;
+    memoCount.textContent = `${memo.value.length} / 120文字`;
     memo.addEventListener('input', () => {
-      memoCount.textContent = `${memo.value.length} / 300`;
+      memoCount.textContent = `${memo.value.length} / 120文字`;
       state.memo = memo.value; save();
     });
 
-    function renderOtherLogs() {
-      const wrap = document.getElementById('otherLog');
-      wrap.innerHTML = state.otherLogs.slice(0, 5).map(log => `
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm flex items-center justify-between">
-      <span>${log.label}</span>
-      <span class="text-slate-500 dark:text-slate-400">${new Date(log.at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
-    </div>
-  `).join('');
-    }
-    renderOtherLogs();
+    document.querySelectorAll('.other-action').forEach(btn => { btn.addEventListener('click', () => { state.extraScore = (state.extraScore || 0) + 1; renderScore(); save(); btn.classList.add('ring-2', 'ring-blue-500'); setTimeout(() => btn.classList.remove('ring-2', 'ring-blue-500'), 400); }); });
 
-    document.querySelectorAll('.other-action').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const label = btn.dataset.label;
-        state.otherLogs.unshift({ label, at: new Date().toISOString() });
-        renderOtherLogs();
-        save();
-        btn.classList.add('ring-2', 'ring-blue-500');
-        setTimeout(() => btn.classList.remove('ring-2', 'ring-blue-500'), 600);
-      });
+    document.getElementById('syncBtn').addEventListener('click', async () => {
+      const { data: { user } } = await sb.auth.getUser();
+
+      if (user) {
+        alert(`同期済み: ${user.email}`);
+        return;
+      }
+
+      const email = prompt('同期に使うメールアドレスを入力してください');
+      if (!email) return;
+
+      const { error } = await sb.auth.signInWithOtp({ email });
+
+      if (error) {
+        alert('送信失敗: ' + error.message);
+      } else {
+        alert('確認メールを送信しました');
+      }
     });
-
-    document.getElementById('syncBtn').addEventListener('click', () => {
-      alert('複数端末対応は次の段階として、GitHub Gist / Supabase / Firebase のいずれかに保存する設計が相性良いです。現状はローカル保存版です。');
-    });
-
     renderBingo();
     applyTheme();
 
