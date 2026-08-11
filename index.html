@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#F8FAFC" />
+  <title>きょうゼロ</title>
+  <link rel="manifest" href="manifest.json" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+  <style>
+    html{scroll-behavior:smooth}
+    body{font-family:Inter,"Noto Sans JP",system-ui,sans-serif}
+    .orb{
+      width:120px;height:120px;border-radius:9999px;position:relative;overflow:hidden;
+      background:radial-gradient(circle at 30% 30%,#fff 0%,#dbeafe 18%,#93c5fd 40%,#3b82f6 72%,#1d4ed8 100%);
+      box-shadow:0 0 0 10px rgba(59,130,246,.08),0 0 0 22px rgba(59,130,246,.04),0 24px 60px rgba(59,130,246,.25)
+    }
+    .dark .orb{
+      background:radial-gradient(circle at 30% 30%,#dbeafe 0%,#93c5fd 18%,#60a5fa 40%,#2563eb 72%,#1e3a8a 100%)
+    }
+    .orb span{
+      position:absolute;width:6px;height:6px;border-radius:9999px;background:rgba(255,255,255,.9);
+      animation:float 3.2s linear infinite
+    }
+    .orb span:nth-child(1){left:28px;bottom:18px;animation-delay:0s}
+    .orb span:nth-child(2){left:58px;bottom:12px;animation-delay:.7s}
+    .orb span:nth-child(3){left:90px;bottom:20px;animation-delay:1.4s}
+    .orb span:nth-child(4){left:46px;bottom:26px;animation-delay:2.1s}
+    @keyframes float{
+      from{transform:translateY(0) scale(1);opacity:1}
+      to{transform:translateY(-120px) scale(.3);opacity:0}
+    }
+    .bingo-cell{aspect-ratio:1/1;transition:all .18s ease}
+    .bingo-cell:active{transform:scale(.98)}
+    .bingo-selected{border-color:rgb(59 130 246)!important;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+    .dark .bingo-selected{border-color:rgb(96 165 250)!important;box-shadow:0 0 0 3px rgba(96,165,250,.16)}
+    .bingo-done{background:rgb(59 130 246)!important;color:#fff!important;border-color:rgb(59 130 246)!important}
+    .dark .bingo-done{background:rgb(96 165 250)!important;border-color:rgb(96 165 250)!important;color:rgb(15 23 42)!important}
+    .action-btn:active{transform:scale(.98)}
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+  <div class="max-w-screen-2xl mx-auto min-h-screen p-4 lg:p-6 space-y-4 lg:space-y-6">
+
+    <header class="flex items-center justify-between">
+      <div>
+        <div id="dateText" class="text-sm text-slate-500 dark:text-slate-400"></div>
+        <div id="timeText" class="text-2xl lg:text-3xl font-semibold tracking-tight"></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="syncBtn" class="h-11 px-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm text-sm font-medium action-btn">
+          ☁️ 同期
+        </button>
+        <button id="themeBtn" class="h-11 w-11 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm text-lg action-btn">
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start">
+
+      <div class="lg:col-span-7 space-y-4 lg:space-y-6">
+
+        <section class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+          <div id="startView" class="p-6 lg:p-8 text-center space-y-4">
+            <div class="inline-flex items-center gap-2 rounded-full border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/40 px-3 py-1 text-xs font-medium text-blue-700 dark:text-blue-300">
+              ✨ しゅわっと開始
+            </div>
+            <div class="mx-auto orb">
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <div class="space-y-1">
+              <h1 class="text-3xl lg:text-4xl font-bold tracking-tight">きょうゼロ</h1>
+              <p class="text-sm text-slate-500 dark:text-slate-400">昨日は保存されました。今日は減点されません。</p>
+            </div>
+            <button id="startBtn" class="w-full rounded-2xl bg-blue-600 text-white py-3.5 font-semibold shadow-sm action-btn">
+              昨日を手放して、きょうを始める
+            </button>
+          </div>
+
+          <div id="scoreView" class="hidden p-6 lg:p-8 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm text-slate-500 dark:text-slate-400">きょうのスコア</div>
+                <div id="scoreValue" class="text-5xl lg:text-6xl font-bold tracking-tight">0</div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm text-slate-500 dark:text-slate-400">負債</div>
+                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">0</div>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3 text-center">
+                <div class="text-xs text-slate-500 dark:text-slate-400">達成</div>
+                <div id="doneCount" class="text-xl font-semibold">0</div>
+              </div>
+              <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3 text-center">
+                <div class="text-xs text-slate-500 dark:text-slate-400">リーチ</div>
+                <div id="reachCount" class="text-xl font-semibold">0</div>
+              </div>
+              <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3 text-center">
+                <div class="text-xs text-slate-500 dark:text-slate-400">ビンゴ</div>
+                <div id="bingoCount" class="text-xl font-semibold">0</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5 lg:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-semibold">ビンゴ</h2>
+              <p class="text-sm text-slate-500 dark:text-slate-400">単発と継続を混ぜて、きょうの9マスを埋める</p>
+            </div>
+          </div>
+
+          <div id="bingoGrid" class="grid grid-cols-3 gap-3"></div>
+
+          <div class="mt-4 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+            <span>リーチで +10</span>
+            <span>ビンゴで +25</span>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="lg:col-span-5 space-y-4 lg:space-y-6">
+
+        <section id="timerSection" class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5 lg:p-6 lg:sticky lg:top-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-semibold">タイマー</h2>
+              <p id="timerLabel" class="text-sm text-slate-500 dark:text-slate-400">ビンゴから選ぶとここに表示されます</p>
+            </div>
+            <div id="timerTypeBadge" class="hidden rounded-full px-3 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+              単発
+            </div>
+          </div>
+
+          <div class="text-center py-4">
+            <div id="timerDisplay" class="text-6xl font-bold tracking-tight">15:00</div>
+            <div id="timerHint" class="mt-2 text-sm text-slate-500 dark:text-slate-400">映画を見ながら気づきをメモする</div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <button id="startTimerBtn" class="rounded-2xl bg-blue-600 text-white py-3.5 font-semibold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed action-btn" disabled>
+              はじめる
+            </button>
+            <button id="stopTimerBtn" class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-3.5 font-semibold text-slate-700 dark:text-slate-200 action-btn">
+              停止
+            </button>
+          </div>
+
+          <button id="completeBtn" class="mt-3 w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 py-3.5 font-semibold text-slate-700 dark:text-slate-200 action-btn">
+            このマスを達成する
+          </button>
+
+          <div class="mt-5 border-t border-slate-200 dark:border-slate-800 pt-4">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <div class="text-sm font-medium">端末同期（任意）</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">GitHub Gist / Supabase / Firebase に接続</div>
+              </div>
+              <div class="text-xs rounded-full px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">設計済み</div>
+            </div>
+            <button class="w-full rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 py-3 text-sm text-slate-500 dark:text-slate-400 action-btn">
+              接続方法を見る
+            </button>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5 lg:p-6">
+          <div class="mb-3">
+            <h2 class="text-lg font-semibold">書き残し</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">受け取ったことも、次につなげたいこともここへ。</p>
+          </div>
+
+          <textarea id="memo" maxlength="300" rows="6" class="w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-3 text-[15px] outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="何を残した？　どう感じた？　次にどうつなげる？"></textarea>
+
+          <div class="mt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>ローカルに保存されます</span>
+            <span id="memoCount">0 / 300</span>
+          </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5 lg:p-6">
+          <div class="mb-4">
+            <h2 class="text-lg font-semibold">その他の行動</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">ビンゴに入っていない行動も記録する。</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <button class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn" data-label="掃除">🧹 掃除</button>
+            <button class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn" data-label="片付け">📦 片付け</button>
+            <button class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn" data-label="Google Keep">📝 Google Keep</button>
+            <button class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn" data-label="ChatGPTと話す">💬 ChatGPTと話す</button>
+          </div>
+
+          <div id="otherLog" class="mt-4 space-y-2"></div>
+        </section>
+
+      </div>
+    </div>
+
+    <div class="text-center text-xs text-slate-400 dark:text-slate-500 py-4">
+      昨日は保存される。きょうはゼロから。
+    </div>
+  </div>
+
+<script>
+const STORAGE_KEY='kyou-zero-pro-v1';
+
+const defaultBingo=[
+  {id:1,label:'映画',type:'single',minutes:15,done:false},
+  {id:2,label:'プロト',type:'single',minutes:15,done:false},
+  {id:3,label:'DIY',type:'single',minutes:15,done:false},
+  {id:4,label:'コード',type:'cont',minutes:25,done:false},
+  {id:5,label:'研究',type:'cont',minutes:25,done:false},
+  {id:6,label:'Cosense',type:'cont',minutes:25,done:false},
+  {id:7,label:'スケジュール',type:'cont',minutes:25,done:false},
+  {id:8,label:'TRN',type:'cont',minutes:25,done:false},
+  {id:9,label:'裁縫',type:'single',minutes:15,done:false},
+];
+
+const state=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null')||{
+  started:false,
+  theme:'light',
+  bingo:defaultBingo,
+  memo:'',
+  otherLogs:[]
+};
+
+const startView=document.getElementById('startView');
+const scoreView=document.getElementById('scoreView');
+const scoreValue=document.getElementById('scoreValue');
+const doneCountEl=document.getElementById('doneCount');
+const reachCountEl=document.getElementById('reachCount');
+const bingoCountEl=document.getElementById('bingoCount');
+const bingoGrid=document.getElementById('bingoGrid');
+
+const timerSection=document.getElementById('timerSection');
+const timerLabel=document.getElementById('timerLabel');
+const timerTypeBadge=document.getElementById('timerTypeBadge');
+const timerDisplay=document.getElementById('timerDisplay');
+const timerHint=document.getElementById('timerHint');
+const startTimerBtn=document.getElementById('startTimerBtn');
+const stopTimerBtn=document.getElementById('stopTimerBtn');
+const completeBtn=document.getElementById('completeBtn');
+
+const memo=document.getElementById('memo');
+const memoCount=document.getElementById('memoCount');
+
+let selectedCellId=null;
+let timerSeconds=15*60;
+let timerId=null;
+
+function save(){ localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); }
+
+function applyTheme(){
+  const dark=state.theme==='dark';
+  document.documentElement.classList.toggle('dark',dark);
+  document.body.classList.toggle('dark',dark);
+  document.getElementById('themeBtn').textContent=dark?'☀️':'🌙';
+  document.querySelector('meta[name="theme-color"]').setAttribute('content',dark?'#020617':'#F8FAFC');
+}
+
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  state.theme=state.theme==='dark'?'light':'dark';
+  applyTheme(); save();
+});
+
+function updateDateTime(){
+  const now=new Date();
+  document.getElementById('dateText').textContent=
+    now.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  document.getElementById('timeText').textContent=
+    now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+}
+updateDateTime(); setInterval(updateDateTime,1000);
+
+function showStarted(){ startView.classList.add('hidden'); scoreView.classList.remove('hidden'); }
+
+document.getElementById('startBtn').addEventListener('click',()=>{
+  startView.style.opacity='0'; startView.style.transform='scale(.98)';
+  setTimeout(()=>{ state.started=true; showStarted(); save(); },420);
+});
+if(state.started) showStarted();
+
+const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+function calcStats(){
+  const done=state.bingo.filter(c=>c.done).length;
+  let reach=0,bingo=0;
+  for(const line of lines){
+    const count=line.map(i=>state.bingo[i].done).filter(Boolean).length;
+    if(count===2) reach++;
+    if(count===3) bingo++;
+  }
+  return {done,reach,bingo,score:done*5+reach*10+bingo*25};
+}
+
+function renderScore(){
+  const s=calcStats();
+  scoreValue.textContent=s.score;
+  doneCountEl.textContent=s.done;
+  reachCountEl.textContent=s.reach;
+  bingoCountEl.textContent=s.bingo;
+}
+
+function renderBingo(){
+  bingoGrid.innerHTML='';
+  state.bingo.forEach(cell=>{
+    const btn=document.createElement('button');
+    btn.className='bingo-cell rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-3 text-left flex flex-col justify-between';
+    if(cell.done) btn.classList.add('bingo-done');
+    if(selectedCellId===cell.id && !cell.done) btn.classList.add('bingo-selected');
+    btn.innerHTML=`
+      <div class="flex items-center justify-between text-xs ${cell.done?'text-white/90 dark:text-slate-900/80':'text-slate-500 dark:text-slate-400'}">
+        <span>${cell.type==='single'?'単発':'継続'}</span><span>${cell.minutes}分</span>
+      </div>
+      <div class="text-sm lg:text-base font-semibold leading-tight mt-3">${cell.label}</div>
+      <div class="mt-3 text-xs ${cell.done?'text-white/90 dark:text-slate-900/80':'text-slate-500 dark:text-slate-400'}">${cell.done?'達成済み':'選択する'}</div>`;
+    btn.addEventListener('click',()=>{
+      if(cell.done) return;
+      selectedCellId=cell.id;
+      timerSeconds=cell.minutes*60;
+      updateTimerDisplay();
+      timerLabel.textContent=cell.label;
+      timerHint.textContent=cell.type==='single'?'気づきや受け取ったこともメモする':'積み上げに集中する';
+      timerTypeBadge.textContent=cell.type==='single'?'単発':'継続';
+      timerTypeBadge.classList.remove('hidden');
+      startTimerBtn.disabled=false;
+      renderBingo();
+      timerSection.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+    bingoGrid.appendChild(btn);
+  });
+  renderScore();
+}
+
+function updateTimerDisplay(){
+  const m=String(Math.floor(timerSeconds/60)).padStart(2,'0');
+  const s=String(timerSeconds%60).padStart(2,'0');
+  timerDisplay.textContent=`${m}:${s}`;
+}
+updateTimerDisplay();
+
+startTimerBtn.addEventListener('click',()=>{
+  if(selectedCellId==null) return;
+  clearInterval(timerId);
+  timerId=setInterval(()=>{
+    if(timerSeconds>0){ timerSeconds--; updateTimerDisplay(); }
+    else{
+      clearInterval(timerId);
+      timerHint.textContent='おつかれさま。達成ボタンでビンゴを埋めよう。';
+      if(navigator.vibrate) navigator.vibrate([120,60,120]);
+    }
+  },1000);
+});
+
+stopTimerBtn.addEventListener('click',()=>clearInterval(timerId));
+
+completeBtn.addEventListener('click',()=>{
+  if(selectedCellId==null) return;
+  const cell=state.bingo.find(c=>c.id===selectedCellId);
+  cell.done=true;
+  selectedCellId=null;
+  startTimerBtn.disabled=true;
+  timerTypeBadge.classList.add('hidden');
+  timerLabel.textContent='ビンゴから選ぶとここに表示されます';
+  timerHint.textContent='次のマスを選んで、はじめるを押してください';
+  timerSeconds=15*60;
+  updateTimerDisplay();
+  clearInterval(timerId);
+  renderBingo();
+  save();
+});
+
+memo.value=state.memo;
+memoCount.textContent=`${memo.value.length} / 300`;
+memo.addEventListener('input',()=>{
+  memoCount.textContent=`${memo.value.length} / 300`;
+  state.memo=memo.value; save();
+});
+
+function renderOtherLogs(){
+  const wrap=document.getElementById('otherLog');
+  wrap.innerHTML=state.otherLogs.slice(0,5).map(log=>`
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 px-3 py-2 text-sm flex items-center justify-between">
+      <span>${log.label}</span>
+      <span class="text-slate-500 dark:text-slate-400">${new Date(log.at).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}</span>
+    </div>
+  `).join('');
+}
+renderOtherLogs();
+
+document.querySelectorAll('.other-action').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const label=btn.dataset.label;
+    state.otherLogs.unshift({label,at:new Date().toISOString()});
+    renderOtherLogs();
+    save();
+    btn.classList.add('ring-2','ring-blue-500');
+    setTimeout(()=>btn.classList.remove('ring-2','ring-blue-500'),600);
+  });
+});
+
+document.getElementById('syncBtn').addEventListener('click',()=>{
+  alert('複数端末対応は次の段階として、GitHub Gist / Supabase / Firebase のいずれかに保存する設計が相性良いです。現状はローカル保存版です。');
+});
+
+renderBingo();
+applyTheme();
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
