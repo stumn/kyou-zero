@@ -225,7 +225,6 @@
           class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5 lg:p-6">
           <div class="mb-4">
             <h2 class="text-lg font-semibold">その他の行動</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400">ビンゴ以外の行動を選択して、15分タイマーを設定できます。</p>
           </div>
 
           <div id="otherActionsContainer" class="grid grid-cols-2 gap-3"></div>
@@ -293,6 +292,61 @@
 
     <div class="text-center text-xs text-slate-400 dark:text-slate-500 py-4">
       昨日は保存される。きょうはゼロから。
+    </div>
+  </div>
+
+  <!-- 行動管理モーダル -->
+  <div id="manageModal"
+    class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div
+      class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden">
+      <header class="p-6 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+        <h3 class="text-lg font-semibold">⚙️ 行動の管理</h3>
+        <button id="closeModalBtn"
+          class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
+      </header>
+
+      <!-- 行動の追加エリア -->
+      <section
+        class="p-6 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950/40 space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <input id="newActionLabel" type="text" placeholder="行動の名前（例: 🏃 散歩）"
+            class="col-span-2 w-full h-11 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          <select id="newActionType"
+            class="h-11 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2 text-sm outline-none">
+            <option value="single">単発（スカイブルー）</option>
+            <option value="cont">継続（ヴァイオレット）</option>
+          </select>
+          <select id="newActionMinutes"
+            class="h-11 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2 text-sm outline-none">
+            <option value="15">15分</option>
+            <option value="25">25分</option>
+            <option value="30">30分</option>
+            <option value="45">45分</option>
+            <option value="60">60分</option>
+          </select>
+          <label
+            class="col-span-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1 cursor-pointer">
+            <input id="newActionIsOther" type="checkbox"
+              class="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500" />
+            「その他の行動」の枠に直接表示する（ビンゴプールからは除外）
+          </label>
+        </div>
+        <button id="addActionBtn"
+          class="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors">
+          追加する
+        </button>
+      </section>
+
+      <!-- 登録済み行動一覧 -->
+      <div id="modalActionList" class="flex-1 overflow-y-auto p-6 space-y-2.5">
+        <!-- JSで動的に追加されます -->
+      </div>
+
+      <footer
+        class="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 text-xs text-slate-400 text-center">
+        ビンゴ候補は、このプールからランダム＋履歴による推薦（最近やってないものが優先）で毎日自動選出されます。
+      </footer>
     </div>
   </div>
 
@@ -482,17 +536,17 @@
       if (!sb) return;
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
-      
+
       const { data: cloudTasks, error } = await sb
         .from('user_tasks')
         .select('label, type, minutes, is_other_action')
         .eq('user_id', user.id);
-        
+
       if (error) {
         console.error('Supabaseのタスク取得に失敗しました:', error.message);
         return;
       }
-      
+
       if (cloudTasks && cloudTasks.length > 0) {
         state.taskPool = cloudTasks.map(t => ({
           label: t.label,
@@ -512,11 +566,11 @@
           minutes: t.minutes,
           is_other_action: t.is_other_action
         }));
-        
+
         const { error: uploadError } = await sb
           .from('user_tasks')
           .insert(uploadData);
-          
+
         if (uploadError) {
           console.error('Supabaseへのタスクアップロードに失敗しました:', uploadError.message);
         }
@@ -527,7 +581,7 @@
       if (!sb) return;
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
-      
+
       await sb.from('user_tasks').upsert({
         user_id: user.id,
         label: task.label,
@@ -541,7 +595,7 @@
       if (!sb) return;
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
-      
+
       await sb.from('user_tasks')
         .delete()
         .eq('user_id', user.id)
@@ -607,20 +661,20 @@
           ? 'border-sky-300 dark:border-sky-600'
           : 'border-violet-300 dark:border-violet-600';
         btn.className = `bingo-cell rounded-2xl border ${borderClass} bg-slate-50 dark:bg-slate-800/60 p-2 flex items-center justify-center text-center h-16 lg:h-20 relative`;
-        
+
         const isCompleted = cell.count > 0;
         if (isCompleted) {
           btn.classList.add(cell.type === 'single' ? 'bingo-done-single' : 'bingo-done-cont');
         }
-        
+
         const isSelected = selectedTask && selectedTask.type === 'bingo' && selectedTask.id === cell.id;
         if (isSelected) btn.classList.add('bingo-selected');
-        
+
         btn.innerHTML = `
           <div class="text-[13px] lg:text-sm font-semibold leading-snug break-words">${cell.label}</div>
           ${cell.count > 1 ? `<div class="absolute top-1 right-2 text-[10px] font-bold bg-white/20 text-white rounded-full px-1.5 min-w-[16px] h-4 flex items-center justify-center">${cell.count}</div>` : ''}
         `;
-        
+
         btn.addEventListener('click', () => {
           selectedTask = {
             type: 'bingo',
@@ -636,7 +690,7 @@
           timerTypeBadge.textContent = cell.type === 'single' ? '単発' : '継続';
           timerTypeBadge.classList.remove('hidden');
           startTimerBtn.disabled = false;
-          
+
           renderBingo();
           renderOtherActions();
           timerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -649,27 +703,26 @@
     function renderOtherActions() {
       const container = document.getElementById('otherActionsContainer');
       container.innerHTML = '';
-      
+
       state.otherActions.forEach(action => {
         const btn = document.createElement('button');
         const isCompleted = action.count > 0;
         const isSelected = selectedTask && selectedTask.type === 'other' && selectedTask.label === action.label;
-        
-        btn.className = `other-action rounded-2xl border p-4 text-center action-btn relative h-16 flex items-center justify-center text-sm font-semibold break-words transition-all duration-150 ${
-          isCompleted 
-            ? 'bingo-done-single border-blue-600 dark:border-blue-400' 
+
+        btn.className = `other-action rounded-2xl border p-4 text-center action-btn relative h-16 flex items-center justify-center text-sm font-semibold break-words transition-all duration-150 ${isCompleted
+            ? 'bingo-done-single border-blue-600 dark:border-blue-400'
             : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60'
-        }`;
-        
+          }`;
+
         if (isSelected) {
           btn.classList.add('bingo-selected');
         }
-        
+
         btn.innerHTML = `
           <span>${action.label}</span>
           ${action.count > 1 ? `<div class="absolute top-1 right-2 text-[10px] font-bold bg-white/20 text-white rounded-full px-1.5 min-w-[16px] h-4 flex items-center justify-center">${action.count}</div>` : ''}
         `;
-        
+
         btn.addEventListener('click', () => {
           selectedTask = {
             type: 'other',
@@ -685,12 +738,12 @@
           timerTypeBadge.textContent = '単発';
           timerTypeBadge.classList.remove('hidden');
           startTimerBtn.disabled = false;
-          
+
           renderBingo();
           renderOtherActions();
           timerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
-        
+
         container.appendChild(btn);
       });
 
@@ -739,7 +792,7 @@
 
     completeBtn.addEventListener('click', () => {
       if (selectedTask == null) return;
-      
+
       if (selectedTask.type === 'bingo') {
         const cell = state.bingo.find(c => c.id === selectedTask.id);
         cell.count = (cell.count || 0) + 1;
@@ -748,7 +801,7 @@
         action.count = (action.count || 0) + 1;
         state.extraScore = (state.extraScore || 0) + 1;
       }
-      
+
       selectedTask = null;
       resetTimerUI();
       renderBingo();
@@ -798,19 +851,19 @@
     function renderModalActionList() {
       const listEl = document.getElementById('modalActionList');
       listEl.innerHTML = '';
-      
+
       state.taskPool.forEach((task, index) => {
         const item = document.createElement('div');
         item.className = 'flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 text-sm';
-        
-        const badgeColor = task.is_other_action 
-          ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' 
+
+        const badgeColor = task.is_other_action
+          ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
           : (task.type === 'single' ? 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300' : 'bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300');
-        
-        const badgeText = task.is_other_action 
-          ? 'その他' 
+
+        const badgeText = task.is_other_action
+          ? 'その他'
           : (task.type === 'single' ? `単発・${task.minutes}分` : `継続・${task.minutes}分`);
-           
+
         item.innerHTML = `
           <div class="flex items-center gap-2">
             <span class="font-semibold">${task.label}</span>
@@ -818,23 +871,23 @@
           </div>
           <button class="delete-task-btn text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 p-1" data-index="${index}">🗑️</button>
         `;
-        
+
         item.querySelector('.delete-task-btn').addEventListener('click', async (e) => {
           const idx = parseInt(e.currentTarget.getAttribute('data-index'));
           const deletedTask = state.taskPool[idx];
           state.taskPool.splice(idx, 1);
-          
+
           save();
           renderModalActionList();
           syncOtherActionsState();
-          
+
           // その日のビンゴの中に削除された行動がある場合、表示上は維持しますが自動生成等に備えて同期
           renderBingo();
           renderOtherActions();
-          
+
           await syncDeleteUserTask(deletedTask.label);
         });
-        
+
         listEl.appendChild(item);
       });
     }
@@ -844,35 +897,35 @@
       const typeEl = document.getElementById('newActionType');
       const minsEl = document.getElementById('newActionMinutes');
       const isOtherEl = document.getElementById('newActionIsOther');
-      
+
       const label = labelEl.value.trim();
       if (!label) {
         alert('行動の名前を入力してください');
         return;
       }
-      
+
       if (state.taskPool.some(t => t.label === label)) {
         alert('同じ名前の行動が既に登録されています');
         return;
       }
-      
+
       const newTask = {
         label: label,
         type: typeEl.value,
         minutes: parseInt(minsEl.value),
         is_other_action: isOtherEl.checked
       };
-      
+
       state.taskPool.push(newTask);
       labelEl.value = '';
       isOtherEl.checked = false;
-      
+
       save();
       renderModalActionList();
       syncOtherActionsState();
       renderBingo();
       renderOtherActions();
-      
+
       await syncUpsertUserTask(newTask);
     });
 
@@ -899,7 +952,7 @@
         state.started = false;
         state.extraScore = 0;
         state.memo = '';
-        
+
         state.otherActions.forEach(action => {
           action.count = 0;
         });
@@ -907,7 +960,7 @@
         state.bingo = generateBingo(state.taskStats);
         state.lastActiveDate = currentJst;
         save();
-        
+
         if (startView && scoreView) {
           startView.classList.remove('hidden');
           startView.style.opacity = '1';
@@ -916,10 +969,10 @@
         }
         memo.value = '';
         document.getElementById('memoCount').textContent = '0 / 120文字';
-        
+
         selectedTask = null;
         resetTimerUI();
-        
+
         renderBingo();
         renderOtherActions();
       }
@@ -928,7 +981,7 @@
     // 初期化ロード
     (async () => {
       checkDailyReset();
-      
+
       // ログイン済みならタスクプールを同期
       if (sb) {
         const { data: { user } } = await sb.auth.getUser();
@@ -936,7 +989,7 @@
           await syncUserTasks();
         }
       }
-      
+
       renderBingo();
       renderOtherActions();
       applyTheme();
@@ -948,50 +1001,6 @@
       navigator.serviceWorker.register('./sw.js').catch(() => { });
     }
   </script>
-
-  <!-- 行動管理モーダル -->
-  <div id="manageModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden">
-      <header class="p-6 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-        <h3 class="text-lg font-semibold">⚙️ 行動の管理</h3>
-        <button id="closeModalBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">✕</button>
-      </header>
-      
-      <!-- 行動の追加エリア -->
-      <section class="p-6 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950/40 space-y-3">
-        <div class="grid grid-cols-2 gap-2">
-          <input id="newActionLabel" type="text" placeholder="行動の名前（例: 🏃 散歩）" class="col-span-2 w-full h-11 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-          <select id="newActionType" class="h-11 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2 text-sm outline-none">
-            <option value="single">単発（スカイブルー）</option>
-            <option value="cont">継続（ヴァイオレット）</option>
-          </select>
-          <select id="newActionMinutes" class="h-11 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2 text-sm outline-none">
-            <option value="15">15分</option>
-            <option value="25">25分</option>
-            <option value="30">30分</option>
-            <option value="45">45分</option>
-            <option value="60">60分</option>
-          </select>
-          <label class="col-span-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1 cursor-pointer">
-            <input id="newActionIsOther" type="checkbox" class="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500" />
-            「その他の行動」の枠に直接表示する（ビンゴプールからは除外）
-          </label>
-        </div>
-        <button id="addActionBtn" class="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors">
-          追加する
-        </button>
-      </section>
-
-      <!-- 登録済み行動一覧 -->
-      <div id="modalActionList" class="flex-1 overflow-y-auto p-6 space-y-2.5">
-        <!-- JSで動的に追加されます -->
-      </div>
-      
-      <footer class="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 text-xs text-slate-400 text-center">
-        ビンゴ候補は、このプールからランダム＋履歴による推薦（最近やってないものが優先）で毎日自動選出されます。
-      </footer>
-    </div>
-  </div>
 </body>
 
 </html>
