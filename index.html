@@ -97,15 +97,27 @@
       box-shadow: 0 0 0 3px rgba(96, 165, 250, .16)
     }
 
-    .bingo-done {
+    .bingo-done-single {
       background: rgb(59 130 246) !important;
       color: #fff !important;
       border-color: rgb(59 130 246) !important
     }
 
-    .dark .bingo-done {
+    .dark .bingo-done-single {
       background: rgb(96 165 250) !important;
       border-color: rgb(96 165 250) !important;
+      color: rgb(15 23 42) !important
+    }
+
+    .bingo-done-cont {
+      background: rgb(124 58 237) !important;
+      color: #fff !important;
+      border-color: rgb(124 58 237) !important
+    }
+
+    .dark .bingo-done-cont {
+      background: rgb(167 139 250) !important;
+      border-color: rgb(167 139 250) !important;
       color: rgb(15 23 42) !important
     }
 
@@ -117,7 +129,7 @@
 </head>
 
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-  <div class="max-w-screen-2xl mx-auto min-h-screen p-4 lg:p-6 space-y-4 lg:space-y-6">
+  <div class="max-w-5xl mx-auto min-h-screen p-4 lg:p-6 space-y-4 lg:space-y-6">
 
     <header class="flex items-center justify-between">
       <div>
@@ -173,15 +185,15 @@
             </div>
             <div class="grid grid-cols-3 gap-3">
               <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3 text-center">
-                <div class="text-xs text-slate-500 dark:text-slate-400">達成</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">達成 (+5)</div>
                 <div id="doneCount" class="text-xl font-semibold">0</div>
               </div>
               <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3 text-center">
-                <div class="text-xs text-slate-500 dark:text-slate-400">リーチ</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">リーチ (+10)</div>
                 <div id="reachCount" class="text-xl font-semibold">0</div>
               </div>
               <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/60 p-3 text-center">
-                <div class="text-xs text-slate-500 dark:text-slate-400">ビンゴ</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">ビンゴ (+25)</div>
                 <div id="bingoCount" class="text-xl font-semibold">0</div>
               </div>
             </div>
@@ -209,23 +221,10 @@
           class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5 lg:p-6">
           <div class="mb-4">
             <h2 class="text-lg font-semibold">その他の行動</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400">ビンゴに入っていない行動も記録する。</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">ビンゴ以外の行動を選択して、15分タイマーを設定できます。</p>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <button
-              class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn"
-              data-label="掃除">🧹 掃除</button>
-            <button
-              class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn"
-              data-label="片付け">📦 片付け</button>
-            <button
-              class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn"
-              data-label="Google Keep">📝 Google Keep</button>
-            <button
-              class="other-action rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-4 text-left action-btn"
-              data-label="ChatGPTと話す">💬 ChatGPTと話す</button>
-          </div>
+          <div id="otherActionsContainer" class="grid grid-cols-2 gap-3"></div>
         </section>
 
       </div>
@@ -294,26 +293,111 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'kyou-zero-pro-v1';
+    const STORAGE_KEY = 'kyou-zero-pro-v2';
 
     // Supabase (replace with your values)
     const SUPABASE_URL = 'https://rortxwatkzyuexrbznvo.supabase.co'
     const SUPABASE_KEY = 'sb_publishable_cKWkokv4nf4hDz6Vt8abvw_kxNBzrQF'
     const sb = window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_KEY)
 
-    const defaultBingo = [
-      { id: 1, label: '映画', type: 'single', minutes: 15, done: false },
-      { id: 2, label: 'プロト', type: 'single', minutes: 15, done: false },
-      { id: 3, label: 'DIY', type: 'single', minutes: 15, done: false },
-      { id: 4, label: 'コード', type: 'cont', minutes: 25, done: false },
-      { id: 5, label: '研究', type: 'cont', minutes: 25, done: false },
-      { id: 6, label: 'Cosense', type: 'cont', minutes: 25, done: false },
-      { id: 7, label: 'スケジュール', type: 'cont', minutes: 25, done: false },
-      { id: 8, label: 'TRN', type: 'cont', minutes: 25, done: false },
-      { id: 9, label: '裁縫', type: 'single', minutes: 15, done: false },
+    const TASK_POOL = [
+      { label: '映画', type: 'single', minutes: 15 },
+      { label: 'プロト', type: 'single', minutes: 15 },
+      { label: 'DIY', type: 'single', minutes: 15 },
+      { label: '裁縫', type: 'single', minutes: 15 },
+      { label: '読書', type: 'single', minutes: 15 },
+      { label: '散歩', type: 'single', minutes: 15 },
+      { label: '片付け', type: 'single', minutes: 15 },
+      { label: 'コード', type: 'cont', minutes: 25 },
+      { label: '研究', type: 'cont', minutes: 25 },
+      { label: 'Cosense', type: 'cont', minutes: 25 },
+      { label: 'スケジュール', type: 'cont', minutes: 25 },
+      { label: 'TRN', type: 'cont', minutes: 25 },
+      { label: '英語', type: 'cont', minutes: 25 },
+      { label: 'ブログ', type: 'cont', minutes: 25 },
+      { label: '筋トレ', type: 'cont', minutes: 25 },
     ];
 
-    const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || { started: false, theme: 'light', bingo: defaultBingo, memo: '', extraScore: 0 };
+    const defaultOtherActions = [
+      { label: '🧹 掃除', count: 0 },
+      { label: '📦 片付け', count: 0 },
+      { label: '📝 Google Keep', count: 0 },
+      { label: '💬 ChatGPTと話す', count: 0 },
+    ];
+
+    function getJstDateString() {
+      const formatter = new Intl.DateTimeFormat('ja-JP', {
+        timeZone: 'Asia/Tokyo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      return formatter.format(new Date()).replace(/\//g, '-');
+    }
+
+    function generateBingo(taskStats) {
+      const stats = taskStats || {};
+      const getWeight = (task) => {
+        const count = stats[task.label]?.count || 0;
+        return 1 / (count + 1);
+      };
+
+      const singles = TASK_POOL.filter(t => t.type === 'single');
+      const conts = TASK_POOL.filter(t => t.type === 'cont');
+
+      const selectTasks = (pool, countNeeded) => {
+        return pool
+          .map(task => ({ task, weight: getWeight(task) * (0.8 + Math.random() * 0.4) }))
+          .sort((a, b) => b.weight - a.weight)
+          .slice(0, countNeeded)
+          .map(item => item.task);
+      };
+
+      const selectedSingles = selectTasks(singles, 4);
+      const selectedConts = selectTasks(conts, 5);
+      const combined = [...selectedSingles, ...selectedConts];
+
+      for (let i = combined.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [combined[i], combined[j]] = [combined[j], combined[i]];
+      }
+
+      return combined.map((task, index) => ({
+        id: index + 1,
+        label: task.label,
+        type: task.type,
+        minutes: task.minutes,
+        count: 0
+      }));
+    }
+
+    const todayJst = getJstDateString();
+    let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+
+    if (!state) {
+      state = {
+        started: false,
+        theme: 'light',
+        bingo: generateBingo({}),
+        otherActions: defaultOtherActions,
+        taskStats: {},
+        lastActiveDate: todayJst,
+        extraScore: 0,
+        memo: ''
+      };
+    }
+
+    // 互換性チェック
+    if (!state.otherActions) state.otherActions = defaultOtherActions;
+    if (!state.taskStats) state.taskStats = {};
+    if (!state.lastActiveDate) state.lastActiveDate = todayJst;
+    if (state.bingo) {
+      state.bingo.forEach(cell => {
+        if (cell.count === undefined) {
+          cell.count = cell.done ? 1 : 0;
+        }
+      });
+    }
 
     const startView = document.getElementById('startView');
     const scoreView = document.getElementById('scoreView');
@@ -335,7 +419,7 @@
     const memo = document.getElementById('memo');
     const memoCount = document.getElementById('memoCount');
 
-    let selectedCellId = null;
+    let selectedTask = null;
     let timerSeconds = 15 * 60;
     let timerId = null;
 
@@ -344,10 +428,10 @@
     let syncTimer = null;
 
     async function syncSave() {
-      if (!supabase) return;
+      if (!sb) return;
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
-      await sb.from('daily_state').upsert({ user_id: user.id, day: new Date().toISOString().slice(0, 10), started: state.started, bingo: state.bingo, memo: state.memo, extra_score: state.extraScore || 0, updated_at: new Date().toISOString() });
+      await sb.from('daily_state').upsert({ user_id: user.id, day: getJstDateString(), started: state.started, bingo: state.bingo, memo: state.memo, extra_score: state.extraScore || 0, updated_at: new Date().toISOString() });
     }
 
     function debouncedSyncSave() {
@@ -387,14 +471,14 @@
     const lines = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
 
     function calcStats() {
-      const done = state.bingo.filter(c => c.done).length;
+      const doneCount = state.bingo.reduce((sum, c) => sum + (c.count || 0), 0);
       let reach = 0, bingo = 0;
       for (const line of lines) {
-        const count = line.map(i => state.bingo[i].done).filter(Boolean).length;
+        const count = line.map(i => state.bingo[i].count > 0).filter(Boolean).length;
         if (count === 2) reach++;
         if (count === 3) bingo++;
       }
-      return { done, reach, bingo, score: done * 5 + reach * 10 + bingo * 25 + (state.extraScore || 0) };
+      return { done: doneCount, reach, bingo, score: doneCount * 5 + reach * 10 + bingo * 25 + (state.extraScore || 0) };
     }
 
     function renderScore() {
@@ -409,17 +493,32 @@
       bingoGrid.innerHTML = '';
       state.bingo.forEach(cell => {
         const btn = document.createElement('button');
-        btn.className = 'bingo-cell rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 p-2 text-left flex flex-col justify-between min-h-[88px] lg:min-h-[96px]'
-        if (cell.done) btn.classList.add('bingo-done');
-        if (selectedCellId === cell.id && !cell.done) btn.classList.add('bingo-selected');
+        const borderClass = cell.type === 'single'
+          ? 'border-sky-300 dark:border-sky-600'
+          : 'border-violet-300 dark:border-violet-600';
+        btn.className = `bingo-cell rounded-2xl border ${borderClass} bg-slate-50 dark:bg-slate-800/60 p-2 flex items-center justify-center text-center h-16 lg:h-20 relative`;
+        
+        const isCompleted = cell.count > 0;
+        if (isCompleted) {
+          btn.classList.add(cell.type === 'single' ? 'bingo-done-single' : 'bingo-done-cont');
+        }
+        
+        const isSelected = selectedTask && selectedTask.type === 'bingo' && selectedTask.id === cell.id;
+        if (isSelected) btn.classList.add('bingo-selected');
+        
         btn.innerHTML = `
-      <div class="flex items-center justify-between text-xs ${cell.done ? 'text-white/90 dark:text-slate-900/80' : 'text-slate-500 dark:text-slate-400'}">
-        <span>${cell.type === 'single' ? '単発' : '継続'}</span><span>${cell.minutes}分</span>
-      </div>
-      <div class="text-sm font-semibold leading-tight mt-1">${cell.label}</div> <div class="mt-1 text-[11px] ${cell.done ? 'text-white/90 dark:text-slate-900/80' : 'text-slate-500 dark:text-slate-400'}">${cell.done ? '達成済み' : '選択する'}</div>`;
+          <div class="text-[13px] lg:text-sm font-semibold leading-snug break-words">${cell.label}</div>
+          ${cell.count > 1 ? `<div class="absolute top-1 right-2 text-[10px] font-bold bg-white/20 text-white rounded-full px-1.5 min-w-[16px] h-4 flex items-center justify-center">${cell.count}</div>` : ''}
+        `;
+        
         btn.addEventListener('click', () => {
-          if (cell.done) return;
-          selectedCellId = cell.id;
+          selectedTask = {
+            type: 'bingo',
+            id: cell.id,
+            label: cell.label,
+            minutes: cell.minutes,
+            taskType: cell.type
+          };
           timerSeconds = cell.minutes * 60;
           updateTimerDisplay();
           timerLabel.textContent = cell.label;
@@ -427,12 +526,77 @@
           timerTypeBadge.textContent = cell.type === 'single' ? '単発' : '継続';
           timerTypeBadge.classList.remove('hidden');
           startTimerBtn.disabled = false;
+          
           renderBingo();
+          renderOtherActions();
           timerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
         bingoGrid.appendChild(btn);
       });
       renderScore();
+    }
+
+    function renderOtherActions() {
+      const container = document.getElementById('otherActionsContainer');
+      container.innerHTML = '';
+      
+      state.otherActions.forEach(action => {
+        const btn = document.createElement('button');
+        const isCompleted = action.count > 0;
+        const isSelected = selectedTask && selectedTask.type === 'other' && selectedTask.label === action.label;
+        
+        btn.className = `other-action rounded-2xl border p-4 text-center action-btn relative h-16 flex items-center justify-center text-sm font-semibold break-words transition-all duration-150 ${
+          isCompleted 
+            ? 'bingo-done-single border-blue-600 dark:border-blue-400' 
+            : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60'
+        }`;
+        
+        if (isSelected) {
+          btn.classList.add('bingo-selected');
+        }
+        
+        btn.innerHTML = `
+          <span>${action.label}</span>
+          ${action.count > 1 ? `<div class="absolute top-1 right-2 text-[10px] font-bold bg-white/20 text-white rounded-full px-1.5 min-w-[16px] h-4 flex items-center justify-center">${action.count}</div>` : ''}
+        `;
+        
+        btn.addEventListener('click', () => {
+          selectedTask = {
+            type: 'other',
+            id: null,
+            label: action.label,
+            minutes: 15,
+            taskType: 'single'
+          };
+          timerSeconds = 15 * 60;
+          updateTimerDisplay();
+          timerLabel.textContent = action.label;
+          timerHint.textContent = '気づきや受け取ったこともメモする';
+          timerTypeBadge.textContent = '単発';
+          timerTypeBadge.classList.remove('hidden');
+          startTimerBtn.disabled = false;
+          
+          renderBingo();
+          renderOtherActions();
+          timerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        
+        container.appendChild(btn);
+      });
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 p-4 text-center action-btn h-16 flex items-center justify-center text-sm text-slate-500 dark:text-slate-400 gap-1';
+      addBtn.innerHTML = '➕ 追加';
+      addBtn.addEventListener('click', () => {
+        const label = prompt('追加する行動の名前を入力してください（例: 🏃 散歩）');
+        if (label && label.trim()) {
+          state.otherActions.push({ label: label.trim(), count: 0 });
+          renderOtherActions();
+          save();
+          debouncedSyncSave();
+        }
+      });
+      container.appendChild(addBtn);
     }
 
     function updateTimerDisplay() {
@@ -442,14 +606,25 @@
     }
     updateTimerDisplay();
 
+    function resetTimerUI() {
+      timerSeconds = 15 * 60;
+      updateTimerDisplay();
+      timerLabel.textContent = 'ビンゴから選ぶとここに表示されます';
+      timerHint.textContent = '次のマスを選んで、はじめるを押してください';
+      timerTypeBadge.classList.add('hidden');
+      startTimerBtn.disabled = true;
+      clearInterval(timerId);
+      timerId = null;
+    }
+
     startTimerBtn.addEventListener('click', () => {
-      if (selectedCellId == null) return;
+      if (selectedTask == null) return;
       clearInterval(timerId);
       timerId = setInterval(() => {
         if (timerSeconds > 0) { timerSeconds--; updateTimerDisplay(); }
         else {
           clearInterval(timerId);
-          timerHint.textContent = 'おつかれさま。達成ボタンでビンゴを埋めよう。';
+          timerHint.textContent = 'おつかれさま。達成ボタンでマスを埋めよう。';
           if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
         }
       }, 1000);
@@ -458,19 +633,23 @@
     stopTimerBtn.addEventListener('click', () => clearInterval(timerId));
 
     completeBtn.addEventListener('click', () => {
-      if (selectedCellId == null) return;
-      const cell = state.bingo.find(c => c.id === selectedCellId);
-      cell.done = true;
-      selectedCellId = null;
-      startTimerBtn.disabled = true;
-      timerTypeBadge.classList.add('hidden');
-      timerLabel.textContent = 'ビンゴから選ぶとここに表示されます';
-      timerHint.textContent = '次のマスを選んで、はじめるを押してください';
-      timerSeconds = 15 * 60;
-      updateTimerDisplay();
-      clearInterval(timerId);
+      if (selectedTask == null) return;
+      
+      if (selectedTask.type === 'bingo') {
+        const cell = state.bingo.find(c => c.id === selectedTask.id);
+        cell.count = (cell.count || 0) + 1;
+      } else if (selectedTask.type === 'other') {
+        const action = state.otherActions.find(a => a.label === selectedTask.label);
+        action.count = (action.count || 0) + 1;
+        state.extraScore = (state.extraScore || 0) + 1;
+      }
+      
+      selectedTask = null;
+      resetTimerUI();
       renderBingo();
+      renderOtherActions();
       save();
+      debouncedSyncSave();
     });
 
     memo.value = state.memo;
@@ -479,8 +658,6 @@
       memoCount.textContent = `${memo.value.length} / 120文字`;
       state.memo = memo.value; save();
     });
-
-    document.querySelectorAll('.other-action').forEach(btn => { btn.addEventListener('click', () => { state.extraScore = (state.extraScore || 0) + 1; renderScore(); save(); btn.classList.add('ring-2', 'ring-blue-500'); setTimeout(() => btn.classList.remove('ring-2', 'ring-blue-500'), 400); }); });
 
     document.getElementById('syncBtn').addEventListener('click', async () => {
       const { data: { user } } = await sb.auth.getUser();
@@ -501,8 +678,62 @@
         alert('確認メールを送信しました');
       }
     });
+
+    function checkDailyReset() {
+      const currentJst = getJstDateString();
+      if (state.lastActiveDate !== currentJst) {
+        if (state.bingo) {
+          state.bingo.forEach(cell => {
+            if (cell.count > 0) {
+              if (!state.taskStats[cell.label]) state.taskStats[cell.label] = { count: 0 };
+              state.taskStats[cell.label].count += cell.count;
+            }
+          });
+        }
+        if (state.otherActions) {
+          state.otherActions.forEach(action => {
+            if (action.count > 0) {
+              if (!state.taskStats[action.label]) state.taskStats[action.label] = { count: 0 };
+              state.taskStats[action.label].count += action.count;
+            }
+          });
+        }
+
+        state.started = false;
+        state.extraScore = 0;
+        state.memo = '';
+        
+        state.otherActions.forEach(action => {
+          action.count = 0;
+        });
+
+        state.bingo = generateBingo(state.taskStats);
+        state.lastActiveDate = currentJst;
+        save();
+        
+        if (startView && scoreView) {
+          startView.classList.remove('hidden');
+          startView.style.opacity = '1';
+          startView.style.transform = 'scale(1)';
+          scoreView.classList.add('hidden');
+        }
+        memo.value = '';
+        document.getElementById('memoCount').textContent = '0 / 120文字';
+        
+        selectedTask = null;
+        resetTimerUI();
+        
+        renderBingo();
+        renderOtherActions();
+      }
+    }
+
+    checkDailyReset();
     renderBingo();
+    renderOtherActions();
     applyTheme();
+
+    window.addEventListener('focus', checkDailyReset);
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(() => { });
